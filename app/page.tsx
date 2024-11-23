@@ -1,21 +1,38 @@
 "use client";
 import { useRouter } from "next/navigation";
-
+import { useEffect } from "react";
 
 export default function Home() {
-
   const router = useRouter();
 
   const handleLoginClick = () => {
     router.push("/login");
   };
 
+  useEffect(() => {
+    const textElement = document.querySelector('.typewriter-text') as HTMLElement | null;
+    if (textElement) {  // Check if textElement is not null
+      const text = textElement.textContent || '';  // Ensure text is a string
+      textElement.textContent = '';
+
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          textElement.textContent += text.charAt(index);
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 45); // Adjust typing speed here
+    }
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#B8DAF7] via-[#F6F6F2] to-[#BCDBF3] text-center">
       {/* Header */}
       <header className="absolute top-0 left-0 w-full bg-black text-white py-4 px-6 flex justify-end">
         <button 
-          className="px-4 py-2 text-sm font-semibold text-white bg-gray-800 rounded hover:bg-gray-700"
+          className="px-4 py-2 text-sm font-semibold text-white bg-black rounded hover:bg-gray-700"
           onClick={handleLoginClick}
         >
           Log In
@@ -25,8 +42,8 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex flex-col items-center gap-8 text-center">
         <div className="flex items-center gap-4" style={{ gap: "30px" }}>
-          {/* SVG Logo */}
-          <div className="w-[100px] h-[50px]">
+          {/* SVG Logo with sideways spin effect */}
+          <div className="w-[100px] h-[50px] transform transition-all duration-300 ">
             <img
               src="/logo.svg"
               alt="Logo"
@@ -42,10 +59,10 @@ export default function Home() {
             />
           </div>
         </div>
-        <p className="text-3xl text-gray-600 max-w-xl">
-          The all-in-one tool for transcribing lectures, taking notes, and analyzing content
+        <p className="typewriter-text text-2xl text-gray-600 max-w-xl">
+          The all-in-one tool for transcribing lectures, taking notes, and analyzing content.
         </p>
-        <button className="px-6 py-3 text-lg font-medium text-white bg-black rounded-full hover:bg-gray-800">
+        <button className="px-6 py-3 text-lg font-medium text-white bg-black rounded-full hover:bg-blue-600 transform hover:scale-110 transition-all duration-200">
           Go Scribe →
         </button>
       </main>
