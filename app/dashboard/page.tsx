@@ -2,94 +2,152 @@
 
 import { useState, useEffect } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Page() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState(''); // Full transcript (final + interim)
-  const [recognition, setRecognition] = useState(null);
+  const [notebooks, setNotebooks] = useState([]);
+  const [selectedNotebook, setSelectedNotebook] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
-  useEffect(() => {
-    // Initialize the SpeechRecognition instance
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
+  // Fetch notebooks from the database
+  const fetchNotebooks = async () => {
+    const supabase = createClient();
 
-      recognitionInstance.continuous = true;
-      recognitionInstance.interimResults = true;
-      recognitionInstance.lang = 'en-US';
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      // Handle results from speech recognition
-      recognitionInstance.onresult = (event) => {
-        let fullTranscript = '';
-
-        for (let i = 0; i < event.results.length; i++) {
-          const result = event.results[i];
-          fullTranscript += result[0].transcript;
-        }
-
-        setTranscript(fullTranscript); // Continuously update the transcript
-      };
-
-      recognitionInstance.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-      };
-
-      setRecognition(recognitionInstance);
-    } else {
-      console.warn('Speech Recognition API is not supported in this browser.');
-    }
-  }, []);
-
-  const toggleListening = () => {
-    if (!recognition) {
-      alert('Speech Recognition is not supported in your browser.');
+    if (userError || !user) {
+      console.error('Error fetching user:', userError || 'No user logged in');
       return;
     }
 
-    if (isListening) {
-      recognition.stop();
-    } else {
-      recognition.start();
+    const { data: notebooksData, error: notebooksError } = await supabase
+      .from('notebooks')
+      .select('id, title, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (notebooksError) {
+      console.error('Error fetching notebooks:', notebooksError);
+      return;
     }
 
-    setIsListening((prev) => !prev);
+    setNotebooks(notebooksData || []);
+    if (!selectedNotebook && notebooksData?.length > 0) {
+      setSelectedNotebook(notebooksData[0]); // Default to the first notebook
+      setEditingTitle(notebooksData[0].title);
+    }
   };
+
+  // Create a new notebook
+  const handleNewNotebook = async () => {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error('Error fetching user:', userError || 'No user logged in');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('notebooks')
+      .insert([{ user_id: user.id, title: 'Untitled Notebook' }]);
+
+    if (error) {
+      console.error('Error creating new notebook:', error);
+      return;
+    }
+
+    await fetchNotebooks();
+  };
+
+  // Update the notebook title
+  const handleUpdateNotebookTitle = async (newTitle) => {
+    if (!selectedNotebook) return;
+
+    const supabase = createClient();
+
+    console.log(
+      'Updating notebook with ID:',
+      selectedNotebook.id,
+      'New Title:',
+      newTitle
+    );
+
+    // Optimistic UI update
+    setNotebooks((prev) =>
+      prev.map((notebook) =>
+        notebook.id === selectedNotebook.id
+          ? { ...notebook, title: newTitle }
+          : notebook
+      )
+    );
+    setSelectedNotebook({ ...selectedNotebook, title: newTitle });
+
+    console.log('Selected Notebook Id: ', selectedNotebook.id);
+    console.log('New Title: ', newTitle);
+    // Update the title in the database
+    const { error } = await supabase
+      .from('notebooks')
+      .update({ title: newTitle })
+      .eq('id', selectedNotebook.id);
+
+    if (error) {
+      console.error('Error updating notebook title in database:', error);
+    } else {
+      console.log(`Notebook "${selectedNotebook.id}" updated to "${newTitle}"`);
+    }
+  };
+
+  // Handle switching notebooks
+  const handleSelectNotebook = (notebook) => {
+    setSelectedNotebook(notebook);
+    setEditingTitle(notebook.title);
+  };
+
+  useEffect(() => {
+    fetchNotebooks();
+  }, []);
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar
+        notebooks={notebooks}
+        onNewNotebook={handleNewNotebook}
+        onSelectNotebook={handleSelectNotebook}
+      />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">
-                  Building Your Application
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div className="flex-1">
+            {selectedNotebook && (
+              <input
+                type="text"
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onBlur={() => handleUpdateNotebookTitle(editingTitle)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                  }
+                }}
+                className="w-full text-lg font-semibold focus:outline-none focus:ring-0 border-0"
+              />
+            )}
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           <div className="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -99,23 +157,7 @@ export default function Page() {
           </div>
           <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min">
             <div className="p-4">
-              <h2 className="text-lg font-semibold mb-2">Speech to Text</h2>
-              <button
-                className={`px-4 py-2 text-white rounded ${
-                  isListening ? 'bg-red-500' : 'bg-green-500'
-                }`}
-                onClick={toggleListening}
-              >
-                {isListening ? 'Stop Listening' : 'Start Listening'}
-              </button>
-              <div className="mt-4 p-4 bg-gray-100 rounded">
-                <p className="text-gray-800 font-medium">
-                  <strong>Transcript:</strong>
-                </p>
-                <p className="text-gray-900">
-                  {transcript || 'Start speaking...'}
-                </p>
-              </div>
+              <h2 className="text-lg font-semibold mb-2">Notebook Content</h2>
             </div>
           </div>
         </div>
