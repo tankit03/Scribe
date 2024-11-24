@@ -62,7 +62,9 @@ export default function Home() {
         <p className="typewriter-text text-2xl text-gray-600 max-w-xl">
           The all-in-one tool for transcribing lectures, taking notes, and analyzing content.
         </p>
-        <button className="px-6 py-3 text-lg font-medium text-white bg-black rounded-full hover:bg-blue-600 transform hover:scale-110 transition-all duration-200">
+        <button className="px-6 py-3 text-lg font-medium text-white bg-black rounded-full hover:bg-blue-600 transform hover:scale-110 transition-all duration-200"
+        onClick={handleLoginClick}
+        >
           Go Scribe →
         </button>
       </main>
