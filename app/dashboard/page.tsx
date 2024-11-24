@@ -10,13 +10,18 @@ import {
 } from '@/components/ui/sidebar';
 
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-  const [bottomPanelHeight, setBottomPanelHeight] = useState(200); // Resizable panel height
-  const [isResizing, setIsResizing] = useState(false); // State for resizing interaction
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(
+    null
+  );
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const [isResizing, setIsResizing] = useState(false);
+  const [notebooks, setNotebooks] = useState([]);
+  const [selectedNotebook, setSelectedNotebook] = useState(null);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -64,13 +69,70 @@ export default function Page() {
     setIsListening((prev) => !prev);
   };
 
+  const fetchNotebooks = async () => {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error('Error fetching user:', userError || 'No user logged in');
+      return;
+    }
+
+    const { data: notebooksData, error: notebooksError } = await supabase
+      .from('notebooks')
+      .select('id, title, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (notebooksError) {
+      console.error('Error fetching notebooks:', notebooksError);
+      return;
+    }
+
+    setNotebooks(notebooksData || []);
+    if (!selectedNotebook && notebooksData?.length > 0) {
+      setSelectedNotebook(notebooksData[0]);
+    }
+  };
+
+  const handleRenameNotebook = async (id, newTitle) => {
+    const supabase = createClient();
+
+    // Optimistic UI update
+    setNotebooks((prev) =>
+      prev.map((notebook) =>
+        notebook.id === id ? { ...notebook, title: newTitle } : notebook
+      )
+    );
+
+    // Update the title in the database
+    const { error } = await supabase
+      .from('notebooks')
+      .update({ title: newTitle })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error renaming notebook:', error);
+    }
+  };
+
+  const handleSelectNotebook = (notebook) => {
+    setSelectedNotebook(notebook);
+  };
+
   const handleResize = (e: React.MouseEvent) => {
     const startY = e.clientY;
     const startHeight = bottomPanelHeight;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const newHeight = startHeight - (moveEvent.clientY - startY);
-      setBottomPanelHeight(Math.max(100, Math.min(newHeight, window.innerHeight - 100)));
+      setBottomPanelHeight(
+        Math.max(100, Math.min(newHeight, window.innerHeight - 100))
+      );
     };
 
     const onMouseUp = () => {
@@ -84,9 +146,18 @@ export default function Page() {
     window.addEventListener('mouseup', onMouseUp);
   };
 
+  useEffect(() => {
+    fetchNotebooks();
+  }, []);
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar
+        notebooks={notebooks}
+        onNewNotebook={fetchNotebooks}
+        onSelectNotebook={handleSelectNotebook}
+        onRenameNotebook={handleRenameNotebook}
+      />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
