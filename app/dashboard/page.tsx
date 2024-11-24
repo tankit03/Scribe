@@ -8,14 +8,67 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+
+import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import { createClient } from '@/utils/supabase/client';
 
 export default function Page() {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(
+    null
+  );
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const [isResizing, setIsResizing] = useState(false);
   const [notebooks, setNotebooks] = useState([]);
   const [selectedNotebook, setSelectedNotebook] = useState(null);
-  const [editingTitle, setEditingTitle] = useState('');
 
-  // Fetch notebooks from the database
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onresult = (event) => {
+        let fullTranscript = '';
+
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          fullTranscript += result[0].transcript;
+        }
+
+        setTranscript(fullTranscript);
+      };
+
+      recognitionInstance.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+
+      setRecognition(recognitionInstance);
+    } else {
+      console.warn('Speech Recognition API is not supported in this browser.');
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognition) {
+      alert('Speech Recognition is not supported in your browser.');
+      return;
+    }
+
+    if (isListening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+
+    setIsListening((prev) => !prev);
+  };
+
   const fetchNotebooks = async () => {
     const supabase = createClient();
 
@@ -42,79 +95,55 @@ export default function Page() {
 
     setNotebooks(notebooksData || []);
     if (!selectedNotebook && notebooksData?.length > 0) {
-      setSelectedNotebook(notebooksData[0]); // Default to the first notebook
-      setEditingTitle(notebooksData[0].title);
+      setSelectedNotebook(notebooksData[0]);
     }
   };
 
-  // Create a new notebook
-  const handleNewNotebook = async () => {
+  const handleRenameNotebook = async (id, newTitle) => {
     const supabase = createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error('Error fetching user:', userError || 'No user logged in');
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('notebooks')
-      .insert([{ user_id: user.id, title: 'Untitled Notebook' }]);
-
-    if (error) {
-      console.error('Error creating new notebook:', error);
-      return;
-    }
-
-    await fetchNotebooks();
-  };
-
-  // Update the notebook title
-  const handleUpdateNotebookTitle = async (newTitle) => {
-    if (!selectedNotebook) return;
-
-    const supabase = createClient();
-
-    console.log(
-      'Updating notebook with ID:',
-      selectedNotebook.id,
-      'New Title:',
-      newTitle
-    );
 
     // Optimistic UI update
     setNotebooks((prev) =>
       prev.map((notebook) =>
-        notebook.id === selectedNotebook.id
-          ? { ...notebook, title: newTitle }
-          : notebook
+        notebook.id === id ? { ...notebook, title: newTitle } : notebook
       )
     );
-    setSelectedNotebook({ ...selectedNotebook, title: newTitle });
 
-    console.log('Selected Notebook Id: ', selectedNotebook.id);
-    console.log('New Title: ', newTitle);
     // Update the title in the database
     const { error } = await supabase
       .from('notebooks')
       .update({ title: newTitle })
-      .eq('id', selectedNotebook.id);
+      .eq('id', id);
 
     if (error) {
-      console.error('Error updating notebook title in database:', error);
-    } else {
-      console.log(`Notebook "${selectedNotebook.id}" updated to "${newTitle}"`);
+      console.error('Error renaming notebook:', error);
     }
   };
 
-  // Handle switching notebooks
   const handleSelectNotebook = (notebook) => {
     setSelectedNotebook(notebook);
-    setEditingTitle(notebook.title);
+  };
+
+  const handleResize = (e: React.MouseEvent) => {
+    const startY = e.clientY;
+    const startHeight = bottomPanelHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newHeight = startHeight - (moveEvent.clientY - startY);
+      setBottomPanelHeight(
+        Math.max(100, Math.min(newHeight, window.innerHeight - 100))
+      );
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    setIsResizing(true);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   };
 
   useEffect(() => {
@@ -125,40 +154,59 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar
         notebooks={notebooks}
-        onNewNotebook={handleNewNotebook}
+        onNewNotebook={fetchNotebooks}
         onSelectNotebook={handleSelectNotebook}
+        onRenameNotebook={handleRenameNotebook}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex-1">
-            {selectedNotebook && (
-              <input
-                type="text"
-                value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
-                onBlur={() => handleUpdateNotebookTitle(editingTitle)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.target.blur();
-                  }
-                }}
-                className="w-full text-lg font-semibold focus:outline-none focus:ring-0 border-0"
-              />
-            )}
-          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
+          {/* Toggle Button */}
+          <div className="flex items-center gap-4 justify-start mb-4">
+            <button
+              className={`p-4 rounded-full ${
+                isListening ? 'bg-red-500' : 'bg-green-500'
+              } hover:bg-opacity-80 transition-all duration-300`}
+              onClick={toggleListening}
+            >
+              {isListening ? (
+                <PauseIcon className="h-8 w-8 text-white" />
+              ) : (
+                <PlayIcon className="h-8 w-8 text-white" />
+              )}
+            </button>
           </div>
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min">
-            <div className="p-4">
-              <h2 className="text-lg font-semibold mb-2">Notebook Content</h2>
-            </div>
+
+          {/* Transcript */}
+          <div className="flex-1 p-4 bg-gray-100 rounded">
+            <p className="text-gray-800 font-medium">
+              <strong>Transcript:</strong>
+            </p>
+            <p className="text-gray-900">{transcript || 'Start speaking...'}</p>
+          </div>
+
+          {/* Resizable Bottom Panel */}
+          <div
+            className="relative bg-muted/50"
+            style={{ height: `${bottomPanelHeight}px` }}
+          >
+            {/* Resizing Handle */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-2 cursor-row-resize ${
+                isResizing ? 'bg-blue-500' : ''
+              } transition-all duration-200`}
+              style={{ userSelect: 'none' }} // Prevents selection
+              onMouseDown={handleResize}
+            />
+
+            {/* Note-Taking Textarea */}
+            <textarea
+              className="w-full h-full resize-none bg-gray-100 p-4 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Write your notes here..."
+            />
           </div>
         </div>
       </SidebarInset>
