@@ -34,20 +34,16 @@ export default function Page() {
 
       recognitionInstance.onresult = (event) => {
         let fullTranscript = '';
-
+      
         for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
           fullTranscript += result[0].transcript;
-
-          // Only update if the result is final
-          if (result.isFinal) {
-            console.log('Final transcript:', fullTranscript);
-
-            // Directly pass `selectedNotebook` as it is used for the current state
-            debouncedSaveSpeechText(selectedNotebook, fullTranscript);
-          }
         }
+      
+        // Update the transcript state with the entire text
+        setTranscript(fullTranscript);
       };
+      
 
       recognitionInstance.onerror = (event) => {
         if (event.error === 'no-speech') {
@@ -189,14 +185,63 @@ export default function Page() {
     fetchNotebooks();
   }, []);
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
     if (!recognition) {
       alert('Speech Recognition is not supported in your browser.');
       return;
     }
-
+  
     if (isListening) {
       recognition.stop();
+  
+      // Save the transcript when the pause button is clicked
+      if (selectedNotebook && transcript) {
+        const supabase = createClient();
+        try {
+          // Check if the notebook details already exist
+          const { data: existingDetails, error: selectError } = await supabase
+            .from('notebook_details')
+            .select('id')
+            .eq('notebook_id', selectedNotebook.id)
+            .single();
+  
+          if (selectError && selectError.code !== 'PGRST116') {
+            console.error('Error checking notebook details:', selectError);
+            return;
+          }
+  
+          if (existingDetails) {
+            // Update the existing record
+            const { error: updateError } = await supabase
+              .from('notebook_details')
+              .update({ speech_text: transcript })
+              .eq('notebook_id', selectedNotebook.id);
+  
+            if (updateError) {
+              console.error('Error updating speech_text:', JSON.stringify(updateError, null, 2));
+            } else {
+              console.log('Successfully updated speech_text.');
+            }
+          } else {
+            // Insert a new record
+            const { error: insertError } = await supabase
+              .from('notebook_details')
+              .insert({
+                notebook_id: selectedNotebook.id,
+                speech_text: transcript,
+              });
+  
+            if (insertError) {
+              console.error('Error inserting speech_text:', JSON.stringify(insertError, null, 2));
+            } else {
+              console.log('Successfully inserted speech_text.');
+            }
+          }
+        } catch (e) {
+          console.error('Unexpected error while saving speech_text:', e);
+        }
+      }
+  
     } else {
       if (!selectedNotebook) {
         alert('Please select a notebook first.');
@@ -204,9 +249,10 @@ export default function Page() {
       }
       recognition.start();
     }
-
+  
     setIsListening((prev) => !prev);
   };
+  
 
   const fetchNotebooks = async () => {
     const supabase = createClient();
@@ -238,33 +284,6 @@ export default function Page() {
     }
   };
 
-  // Debounce the save speech text function to reduce DB operations
-  const debouncedSaveSpeechText = debounce(async (notebook, speechText) => {
-    if (notebook && speechText) {
-      const supabase = createClient();
-      try {
-        const { error } = await supabase
-          .from('notebook_details')
-          .upsert(
-            {
-              notebook_id: notebook.id,
-              speech_text: speechText,
-            },
-            { onConflict: ['notebook_id'] }
-          );
-
-        if (error) {
-          console.error('Error saving speech text:', error);
-        } else {
-          console.log('Speech text successfully saved.');
-        }
-      } catch (e) {
-        console.error('Unexpected error while saving speech_text:', e);
-      }
-    } else {
-      console.error('Notebook is null or speech text is empty, unable to save.');
-    }
-  }, 1000); // Adjust the debounce delay as needed
 
   const handleSelectNotebook = async (notebook) => {
     console.log('Notebook selected:', notebook);
