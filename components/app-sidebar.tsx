@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
 import { PencilIcon } from '@heroicons/react/24/solid';
+import { LogOut, FilePlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { CardWithForm } from '@/components/createNotebook';
 import { RenameNotebookModal } from '@/components/RenameNotebookModal';
@@ -90,6 +92,19 @@ export function AppSidebar({
     }
   };
 
+  const handleSignOut = async () => {
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      alert('Failed to sign out.');
+      return;
+    }
+
+    window.location.href = '/';
+  };
+
   return (
     <>
       <Sidebar {...props}>
@@ -99,8 +114,9 @@ export function AppSidebar({
           </h2>
           <Button
             onClick={handleNewNotebook}
-            className="bg-blue-500 text-white px-3 my-3 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-3 my-3 rounded hover:bg-blue-600 flex items-center gap-2"
           >
+            <FilePlus className="w-5 h-5" />
             New Notebook
           </Button>
         </SidebarHeader>
@@ -133,6 +149,15 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarContent>
         <SidebarRail />
+        <SidebarFooter className="mt-auto flex justify-center">
+          <Button
+            onClick={handleSignOut}
+            className="bg-gray-200 text-gray-700 hover:bg-gray-300 px-3 rounded w-full flex items-center gap-2"
+          >
+            <LogOut className="w-5 h-5 text-gray-700" />
+            Log Out
+          </Button>
+        </SidebarFooter>
       </Sidebar>
 
       {/* Render Modal for Creating Notebook */}
