@@ -1,4 +1,5 @@
 import * as React from "react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -11,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { CardWithForm } from "@/components/createNotebook";
 import { createClient } from "@/utils/supabase/client";
@@ -59,6 +61,20 @@ export function AppSidebar({
     closeModal(); // Close the modal
   };
 
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error);
+      alert("Failed to sign out.");
+      return;
+    }
+
+    window.location.href = "/";
+  };
+
   return (
     <>
       <Sidebar {...props}>
@@ -94,6 +110,15 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarContent>
         <SidebarRail />
+        <SidebarFooter className="mt-auto flex justify-center">
+          <Button
+            onClick={handleSignOut}
+            className="bg-gray-200 text-gray-700 hover:bg-gray-300 px-3 rounded w-full flex items-center gap-2"
+          >
+            <LogOut className="w-5 h-5 text-gray-700" />
+            Log Out
+          </Button>
+        </SidebarFooter>
       </Sidebar>
 
       {/* Render Modal */}
