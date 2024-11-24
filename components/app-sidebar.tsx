@@ -1,5 +1,6 @@
-import * as React from "react";
-import { Button } from "@/components/ui/button";
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import { PencilIcon } from '@heroicons/react/24/solid';
 import {
   Sidebar,
   SidebarContent,
@@ -11,27 +12,35 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar";
-import { CardWithForm } from "@/components/createNotebook";
-import { createClient } from "@/utils/supabase/client";
+} from '@/components/ui/sidebar';
+import { CardWithForm } from '@/components/createNotebook';
+import { RenameNotebookModal } from '@/components/RenameNotebookModal';
+import { createClient } from '@/utils/supabase/client';
 
 export function AppSidebar({
   notebooks = [],
   onNewNotebook,
   onSelectNotebook,
+  onRenameNotebook,
+  onDeleteNotebook,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   notebooks: Array<{ id: string; title: string }>;
   onNewNotebook: () => void;
   onSelectNotebook: (notebook: { id: string; title: string }) => void;
+  onRenameNotebook: (id: string, newTitle: string) => void;
+  onDeleteNotebook: (id: string) => void; // New prop for delete function
 }) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
+  const [editingNotebookId, setEditingNotebookId] = React.useState<string | null>(null);
+  const [currentTitle, setCurrentTitle] = React.useState('');
 
   const handleNewNotebook = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
   const addNotebook = async (title: string) => {
-    console.log("Creating notebook with title:", title);
+    console.log('Creating notebook with title:', title);
     const supabase = createClient();
 
     const {
@@ -40,23 +49,45 @@ export function AppSidebar({
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      console.error("Error fetching user:", userError || "No user logged in");
-      alert("You must be logged in to create a notebook.");
+      console.error('Error fetching user:', userError || 'No user logged in');
+      alert('You must be logged in to create a notebook.');
       return;
     }
 
     const { error } = await supabase
-      .from("notebooks")
+      .from('notebooks')
       .insert([{ title, user_id: user.id }]);
 
     if (error) {
-      console.error("Error creating notebook:", error);
-      alert("Failed to create notebook.");
+      console.error('Error creating notebook:', error);
+      alert('Failed to create notebook.');
       return;
     }
 
     onNewNotebook(); // Refresh the notebook list
     closeModal(); // Close the modal
+  };
+
+  const handleRename = (id: string, title: string) => {
+    setEditingNotebookId(id); // Start editing mode for the selected notebook
+    setCurrentTitle(title); // Pre-fill the modal with the current title
+    setIsRenameModalOpen(true); // Open the rename modal
+  };
+
+  const handleRenameSubmit = async (newTitle: string) => {
+    if (editingNotebookId && newTitle.trim() !== '') {
+      await onRenameNotebook(editingNotebookId, newTitle.trim());
+      setEditingNotebookId(null); // Exit editing mode
+      setIsRenameModalOpen(false); // Close the rename modal
+    }
+  };
+
+  const handleDeleteNotebook = async () => {
+    if (editingNotebookId) {
+      await onDeleteNotebook(editingNotebookId);
+      setEditingNotebookId(null); // Exit editing mode
+      setIsRenameModalOpen(false); // Close the rename modal
+    }
   };
 
   return (
@@ -66,13 +97,12 @@ export function AppSidebar({
           <h2 className="text-lg font-semibold items-center justify-between">
             My Notebooks
           </h2>
-            <Button
-              onClick={handleNewNotebook}
-              className="bg-blue-500 text-white px-3 my-3 rounded hover:bg-blue-600"
-            >
-              New Notebook
-            </Button>
-          
+          <Button
+            onClick={handleNewNotebook}
+            className="bg-blue-500 text-white px-3 my-3 rounded hover:bg-blue-600"
+          >
+            New Notebook
+          </Button>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -81,12 +111,21 @@ export function AppSidebar({
               <SidebarMenu>
                 {notebooks.map((notebook) => (
                   <SidebarMenuItem key={notebook.id}>
-                    <SidebarMenuButton
-                      asChild
-                      onClick={() => onSelectNotebook(notebook)}
-                    >
-                      <a href={`#notebook-${notebook.id}`}>{notebook.title}</a>
-                    </SidebarMenuButton>
+                    <div className="flex items-center justify-between w-full group">
+                      <SidebarMenuButton
+                        asChild
+                        onClick={() => onSelectNotebook(notebook)}
+                      >
+                        <a href={`#notebook-${notebook.id}`}>{notebook.title}</a>
+                      </SidebarMenuButton>
+                      <button
+                        onClick={() => handleRename(notebook.id, notebook.title)}
+                        className="p-2 hover:bg-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        aria-label="Rename Notebook"
+                      >
+                        <PencilIcon className="h-5 w-5 text-gray-600" />
+                      </button>
+                    </div>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -96,12 +135,21 @@ export function AppSidebar({
         <SidebarRail />
       </Sidebar>
 
-      {/* Render Modal */}
+      {/* Render Modal for Creating Notebook */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <CardWithForm onCancel={closeModal} onSubmit={addNotebook} />
         </div>
       )}
+
+      {/* Render Modal for Renaming or Deleting Notebook */}
+      <RenameNotebookModal
+        isOpen={isRenameModalOpen}
+        currentTitle={currentTitle}
+        onClose={() => setIsRenameModalOpen(false)}
+        onSubmit={handleRenameSubmit}
+        onDelete={handleDeleteNotebook} // Pass delete function to modal
+      />
     </>
   );
 }

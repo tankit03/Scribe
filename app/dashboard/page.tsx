@@ -99,7 +99,7 @@ export default function Page() {
     }
   };
 
-  const handleRenameNotebook = async (id, newTitle) => {
+  const handleRenameNotebook = async (id: string, newTitle: string) => {
     const supabase = createClient();
 
     // Optimistic UI update
@@ -123,6 +123,24 @@ export default function Page() {
   const handleSelectNotebook = (notebook) => {
     setSelectedNotebook(notebook);
   };
+
+  const handleDeleteNotebook = async (id: string) => {
+    const supabase = createClient();
+  
+    // Remove notebook optimistically from UI
+    setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
+  
+    // Delete the notebook from the database
+    const { error } = await supabase
+      .from('notebooks')
+      .delete()
+      .eq('id', id);
+  
+    if (error) {
+      console.error('Error deleting notebook:', error);
+    }
+  };
+  
 
   const handleResize = (e: React.MouseEvent) => {
     const startY = e.clientY;
@@ -156,7 +174,8 @@ export default function Page() {
         notebooks={notebooks}
         onNewNotebook={fetchNotebooks}
         onSelectNotebook={handleSelectNotebook}
-        // onRenameNotebook={handleRenameNotebook}
+        onRenameNotebook={handleRenameNotebook} // Add this prop
+        onDeleteNotebook={handleDeleteNotebook}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
