@@ -1,5 +1,5 @@
 import * as React from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, FilePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -86,6 +86,7 @@ export function AppSidebar({
               onClick={handleNewNotebook}
               className="bg-blue-500 text-white px-3 my-3 rounded hover:bg-blue-600"
             >
+              <FilePlus className="w-5 h-5" />
               New Notebook
             </Button>
           
