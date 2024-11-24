@@ -59,23 +59,34 @@ export default function Page() {
     }
   }, []);
 
-    const handleRenameNotebook = async (id: string, newTitle: string) => {
+  const handleRenameNotebook = async (id: string, newTitle: string) => {
     const supabase = createClient();
-
-    // Optimistic UI update
-    setNotebooks((prev) => prev.map((notebook) => notebook.id === id ? { ...notebook, title: newTitle } : notebook)
+  
+    // Optimistic UI update for notebooks list
+    setNotebooks((prev) =>
+      prev.map((notebook) =>
+        notebook.id === id ? { ...notebook, title: newTitle } : notebook
+      )
     );
-
+  
+    // Optimistically update the selected notebook if it's the one being renamed
+    if (selectedNotebook?.id === id) {
+      setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
+    }
+  
     // Update the title in the database
     const { error } = await supabase
       .from('notebooks')
       .update({ title: newTitle })
       .eq('id', id);
-
+  
     if (error) {
       console.error('Error renaming notebook:', error);
+      // Optionally revert the optimistic update if the DB update fails
+      fetchNotebooks();
     }
   };
+  
 
   const handleDeleteNotebook = async (id: string) => {
       console.log('Deleting notebook with ID:', id); 
@@ -313,6 +324,7 @@ export default function Page() {
       setNotes('');
     }
   };
+  
 
   return (
     <SidebarProvider>
@@ -327,8 +339,8 @@ export default function Page() {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          
-          {/* Add notebook title next to the collapse button */}
+
+          {/* Display selected notebook title */}
           {selectedNotebook ? (
             <div className="ml-4 text-xl font-semibold text-gray-900">
               {selectedNotebook.title}
@@ -349,6 +361,7 @@ export default function Page() {
             />
           </div>
         </header>
+
         
 
         <div className="flex flex-1 flex-col gap-4 p-4">
