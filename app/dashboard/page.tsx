@@ -327,6 +327,18 @@ export default function Page() {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
+          
+          {/* Add notebook title next to the collapse button */}
+          {selectedNotebook ? (
+            <div className="ml-4 text-xl font-semibold text-gray-900">
+              {selectedNotebook.title}
+            </div>
+          ) : (
+            <div className="ml-4 text-xl font-semibold text-gray-400">
+              Select a notebook
+            </div>
+          )}
+
           <div className="ml-auto">
             <img
               src="/logo.svg"
@@ -337,6 +349,8 @@ export default function Page() {
             />
           </div>
         </header>
+        
+
         <div className="flex flex-1 flex-col gap-4 p-4">
           {/* Toggle Button */}
           <div className="flex items-center gap-4 justify-start mb-4">
