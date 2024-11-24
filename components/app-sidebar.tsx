@@ -24,6 +24,7 @@ export function AppSidebar({
   onNewNotebook,
   onSelectNotebook,
   onRenameNotebook,
+  
   onDeleteNotebook,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
