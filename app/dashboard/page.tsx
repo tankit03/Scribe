@@ -14,6 +14,9 @@ import { createClient } from '@/utils/supabase/client';
 import { SpeechSummary } from '@/components/speech-summary';
 
 
+
+
+
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -27,6 +30,8 @@ export default function Page() {
   const [notes, setNotes] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+
+  
 
   
 
