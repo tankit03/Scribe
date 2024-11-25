@@ -40,11 +40,20 @@ export async function POST(req: Request) {
     return NextResponse.json({
       summary: response.data.choices[0].message.content,
     });
-  } catch (error: any) {
-    console.error('Error from OpenAI:', error.response?.data || error.message);
-    return NextResponse.json(
-      { error: 'Failed to generate summary' },
-      { status: 500 }
-    );
+  } catch (error) {
+    // Type-safe error handling
+    if (axios.isAxiosError(error)) {
+      console.error('Error from OpenAI:', error.response?.data || error.message);
+      return NextResponse.json(
+        { error: 'Failed to generate summary', details: error.response?.data },
+        { status: 500 }
+      );
+    } else {
+      console.error('Unexpected Error:', error);
+      return NextResponse.json(
+        { error: 'An unexpected error occurred' },
+        { status: 500 }
+      );
+    }
   }
 }
