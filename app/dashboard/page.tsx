@@ -23,7 +23,7 @@ export default function Page() {
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [selectedNotebook, setSelectedNotebook] = useState(null);
+  const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
   const [notes, setNotes] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
