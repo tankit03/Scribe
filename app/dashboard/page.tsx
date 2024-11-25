@@ -311,7 +311,7 @@ export default function Page() {
     }
   };
 
-  const handleSelectNotebook = async (notebook) => {
+  const handleSelectNotebook = async (notebook: Notebook) => {
     console.log('Notebook selected:', notebook);
     setSelectedNotebook(notebook);
     setNewTitle(notebook.title); // Initialize the editable title
