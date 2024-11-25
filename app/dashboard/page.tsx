@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -11,7 +11,6 @@ import {
 
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import { createClient } from '@/utils/supabase/client';
-import { debounce } from 'lodash';
 
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
@@ -194,7 +193,7 @@ export default function Page() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   };
-
+  
   useEffect(() => {
     fetchNotebooks();
   }, []);
@@ -354,6 +353,7 @@ export default function Page() {
   };
 
   return (
+    
     <SidebarProvider>
       <AppSidebar
         notebooks={notebooks}
@@ -403,6 +403,7 @@ export default function Page() {
             </div>
           )}
 
+
           <div className="ml-auto">
             <img
               src="/logo.svg"
@@ -412,6 +413,7 @@ export default function Page() {
               className="object-contain"
             />
           </div>
+
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4">
@@ -461,6 +463,7 @@ export default function Page() {
               onChange={handleNotesChange}
             />
           </div>
+          
         </div>
         <footer className="bg-gray-100 text-gray-600 py-2 px-4">
           <div className="flex flex-col justify-center items-center max-w-screen-xl mx-auto">
