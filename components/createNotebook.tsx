@@ -1,6 +1,6 @@
-import * as React from "react";
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -8,9 +8,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function CardWithForm({
   onCancel,
@@ -19,15 +19,27 @@ export function CardWithForm({
   onCancel: () => void;
   onSubmit: (title: string) => void;
 }) {
-  const [notebookTitle, setNotebookTitle] = React.useState("");
+  const [notebookTitle, setNotebookTitle] = React.useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // Prevent the default form submission behavior
     e.preventDefault();
-    if (notebookTitle.trim() === "") {
-      alert("Notebook title cannot be empty.");
+    if (notebookTitle.trim() === '') {
+      alert('Notebook title cannot be empty.');
       return;
     }
-    onSubmit(notebookTitle); // Pass the notebook title to the parent
+    onSubmit(notebookTitle); // Call the parent handler with the title
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent the default "submit" behavior on Enter
+      if (notebookTitle.trim() === '') {
+        alert('Notebook title cannot be empty.');
+        return;
+      }
+      onSubmit(notebookTitle); // Call the parent handler with the title
+    }
   };
 
   return (
@@ -35,7 +47,9 @@ export function CardWithForm({
       <form onSubmit={handleSubmit}>
         <CardHeader>
           <CardTitle>Create a Notebook</CardTitle>
-          <CardDescription>Start taking notes in your own personal notebook</CardDescription>
+          <CardDescription>
+            Start taking notes in your own personal notebook
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid w-full items-center gap-4">
@@ -46,6 +60,8 @@ export function CardWithForm({
                 placeholder="Name of your notebook"
                 value={notebookTitle}
                 onChange={(e) => setNotebookTitle(e.target.value)}
+                onKeyDown={handleKeyDown} // Handle the Enter key here
+                autoFocus
               />
             </div>
           </div>
@@ -54,7 +70,7 @@ export function CardWithForm({
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">Deploy</Button>
+          <Button type="submit">Create</Button>
         </CardFooter>
       </form>
     </Card>

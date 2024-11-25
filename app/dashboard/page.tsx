@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -16,16 +16,21 @@ import { debounce } from 'lodash';
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(
+    null
+  );
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
   const [notebooks, setNotebooks] = useState([]);
   const [selectedNotebook, setSelectedNotebook] = useState(null);
   const [notes, setNotes] = useState('');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
 
       recognitionInstance.continuous = true;
@@ -34,16 +39,15 @@ export default function Page() {
 
       recognitionInstance.onresult = (event) => {
         let fullTranscript = '';
-      
+
         for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
           fullTranscript += result[0].transcript;
         }
-      
+
         // Update the transcript state with the entire text
         setTranscript(fullTranscript);
       };
-      
 
       recognitionInstance.onerror = (event) => {
         if (event.error === 'no-speech') {
@@ -61,114 +65,113 @@ export default function Page() {
 
   const handleRenameNotebook = async (id: string, newTitle: string) => {
     const supabase = createClient();
-  
+
     // Optimistic UI update for notebooks list
     setNotebooks((prev) =>
       prev.map((notebook) =>
         notebook.id === id ? { ...notebook, title: newTitle } : notebook
       )
     );
-  
+
     // Optimistically update the selected notebook if it's the one being renamed
     if (selectedNotebook?.id === id) {
       setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
     }
-  
+
     // Update the title in the database
     const { error } = await supabase
       .from('notebooks')
       .update({ title: newTitle })
       .eq('id', id);
-  
+
     if (error) {
       console.error('Error renaming notebook:', error);
       // Optionally revert the optimistic update if the DB update fails
       fetchNotebooks();
     }
   };
-  
 
   const handleDeleteNotebook = async (id: string) => {
-      console.log('Deleting notebook with ID:', id); 
-      const supabase = createClient();
-    
-      // Optimistically update the UI to remove the notebook
-      setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
-  
-      
-    
-      // Delete the notebook from the database
-      const { error } = await supabase
-        .from('notebooks')
-        .delete()
-        .eq('id', id);
-    
-      if (error) {
-        console.error('Error deleting notebook:', error);
-        // If there's an error deleting from the database, revert the optimistic update
-        fetchNotebooks(); // Re-fetch notebooks to update the UI to reflect the database state
-        alert('Failed to delete notebook from the database.');
-      }
+    console.log('Deleting notebook with ID:', id);
+    const supabase = createClient();
+
+    // Optimistically update the UI to remove the notebook
+    setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
+
+    // Delete the notebook from the database
+    const { error } = await supabase.from('notebooks').delete().eq('id', id);
+
+    if (error) {
+      console.error('Error deleting notebook:', error);
+      // If there's an error deleting from the database, revert the optimistic update
+      fetchNotebooks(); // Re-fetch notebooks to update the UI to reflect the database state
+      alert('Failed to delete notebook from the database.');
+    }
   };
 
   const handleNotesChange = async (event) => {
-        const newNotes = event.target.value;
-        setNotes(newNotes);
-      
-        if (selectedNotebook) {
-          const supabase = createClient();
-      
-          console.log('Saving notes:', {
-            notebook_id: selectedNotebook.id,
-            notes: newNotes,
-          });
-      
-          try {
-            // Check if the notebook details already exist
-            const { data: existingDetails, error: selectError } = await supabase
-              .from('notebook_details')
-              .select('id')
-              .eq('notebook_id', selectedNotebook.id)
-              .single();
-      
-            if (selectError && selectError.code !== 'PGRST116') {
-              console.error('Error checking notebook details:', selectError);
-              return;
-            }
-      
-            if (existingDetails) {
-              // Update the existing record
-              const { data, error: updateError } = await supabase
-                .from('notebook_details')
-                .update({ notes: newNotes })
-                .eq('notebook_id', selectedNotebook.id);
-      
-              if (updateError) {
-                console.error('Error updating notes:', JSON.stringify(updateError, null, 2));
-              } else {
-                console.log('Successfully updated notes:', data);
-              }
-            } else {
-              // Insert a new record
-              const { data, error: insertError } = await supabase
-                .from('notebook_details')
-                .insert({
-                  notebook_id: selectedNotebook.id,
-                  notes: newNotes,
-                });
-      
-              if (insertError) {
-                console.error('Error inserting notes:', JSON.stringify(insertError, null, 2));
-              } else {
-                console.log('Successfully inserted notes:', data);
-              }
-            }
-          } catch (e) {
-            console.error('Unexpected error while saving notes:', e);
+    const newNotes = event.target.value;
+    setNotes(newNotes);
+
+    if (selectedNotebook) {
+      const supabase = createClient();
+
+      console.log('Saving notes:', {
+        notebook_id: selectedNotebook.id,
+        notes: newNotes,
+      });
+
+      try {
+        // Check if the notebook details already exist
+        const { data: existingDetails, error: selectError } = await supabase
+          .from('notebook_details')
+          .select('id')
+          .eq('notebook_id', selectedNotebook.id)
+          .single();
+
+        if (selectError && selectError.code !== 'PGRST116') {
+          console.error('Error checking notebook details:', selectError);
+          return;
+        }
+
+        if (existingDetails) {
+          // Update the existing record
+          const { data, error: updateError } = await supabase
+            .from('notebook_details')
+            .update({ notes: newNotes })
+            .eq('notebook_id', selectedNotebook.id);
+
+          if (updateError) {
+            console.error(
+              'Error updating notes:',
+              JSON.stringify(updateError, null, 2)
+            );
+          } else {
+            console.log('Successfully updated notes:', data);
+          }
+        } else {
+          // Insert a new record
+          const { data, error: insertError } = await supabase
+            .from('notebook_details')
+            .insert({
+              notebook_id: selectedNotebook.id,
+              notes: newNotes,
+            });
+
+          if (insertError) {
+            console.error(
+              'Error inserting notes:',
+              JSON.stringify(insertError, null, 2)
+            );
+          } else {
+            console.log('Successfully inserted notes:', data);
           }
         }
-      };
-      
+      } catch (e) {
+        console.error('Unexpected error while saving notes:', e);
+      }
+    }
+  };
 
   const handleResize = (e: React.MouseEvent) => {
     const startY = e.clientY;
@@ -201,10 +204,10 @@ export default function Page() {
       alert('Speech Recognition is not supported in your browser.');
       return;
     }
-  
+
     if (isListening) {
       recognition.stop();
-  
+
       // Save the transcript when the pause button is clicked
       if (selectedNotebook && transcript) {
         const supabase = createClient();
@@ -215,21 +218,24 @@ export default function Page() {
             .select('id')
             .eq('notebook_id', selectedNotebook.id)
             .single();
-  
+
           if (selectError && selectError.code !== 'PGRST116') {
             console.error('Error checking notebook details:', selectError);
             return;
           }
-  
+
           if (existingDetails) {
             // Update the existing record
             const { error: updateError } = await supabase
               .from('notebook_details')
               .update({ speech_text: transcript })
               .eq('notebook_id', selectedNotebook.id);
-  
+
             if (updateError) {
-              console.error('Error updating speech_text:', JSON.stringify(updateError, null, 2));
+              console.error(
+                'Error updating speech_text:',
+                JSON.stringify(updateError, null, 2)
+              );
             } else {
               console.log('Successfully updated speech_text.');
             }
@@ -241,9 +247,12 @@ export default function Page() {
                 notebook_id: selectedNotebook.id,
                 speech_text: transcript,
               });
-  
+
             if (insertError) {
-              console.error('Error inserting speech_text:', JSON.stringify(insertError, null, 2));
+              console.error(
+                'Error inserting speech_text:',
+                JSON.stringify(insertError, null, 2)
+              );
             } else {
               console.log('Successfully inserted speech_text.');
             }
@@ -252,7 +261,6 @@ export default function Page() {
           console.error('Unexpected error while saving speech_text:', e);
         }
       }
-  
     } else {
       if (!selectedNotebook) {
         alert('Please select a notebook first.');
@@ -260,10 +268,9 @@ export default function Page() {
       }
       recognition.start();
     }
-  
+
     setIsListening((prev) => !prev);
   };
-  
 
   const fetchNotebooks = async () => {
     const supabase = createClient();
@@ -295,13 +302,12 @@ export default function Page() {
     }
   };
 
-
   const handleSelectNotebook = async (notebook) => {
     console.log('Notebook selected:', notebook);
     setSelectedNotebook(notebook);
+    setNewTitle(notebook.title); // Initialize the editable title
 
     const supabase = createClient();
-
     const { data: notebookDetails, error } = await supabase
       .from('notebook_details')
       .select('speech_text, notes')
@@ -313,18 +319,39 @@ export default function Page() {
       return;
     }
 
-    if (notebookDetails) {
-      console.log('Fetched notebook details:', notebookDetails);
-      setTranscript(notebookDetails.speech_text || '');
-      setNotes(notebookDetails.notes || '');
-    } else {
-      console.log('No details found for notebook:', notebook);
-      // Reset if there are no details
-      setTranscript('');
-      setNotes('');
-    }
+    setTranscript(notebookDetails?.speech_text || '');
+    setNotes(notebookDetails?.notes || '');
   };
-  
+
+  const handleTitleBlur = async () => {
+    setIsEditingTitle(false);
+
+    if (!selectedNotebook || newTitle.trim() === '') return;
+
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from('notebooks')
+      .update({ title: newTitle })
+      .eq('id', selectedNotebook.id);
+
+    if (error) {
+      console.error('Error updating notebook title:', error);
+      return;
+    }
+
+    // Update sidebar title
+    setNotebooks((prev) =>
+      prev.map((notebook) =>
+        notebook.id === selectedNotebook.id
+          ? { ...notebook, title: newTitle }
+          : notebook
+      )
+    );
+
+    // Update selected notebook title
+    setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
+  };
 
   return (
     <SidebarProvider>
@@ -341,9 +368,34 @@ export default function Page() {
           <Separator orientation="vertical" className="mr-2 h-4" />
 
           {/* Display selected notebook title */}
+          {/* Display selected notebook title */}
           {selectedNotebook ? (
-            <div className="ml-4 text-xl font-semibold text-gray-900">
-              {selectedNotebook.title}
+            <div className="ml-4">
+              {isEditingTitle ? (
+                <input
+                  value={newTitle || selectedNotebook.title} // Prefill with the current title
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onBlur={handleTitleBlur} // Save changes when focus is lost
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleTitleBlur(); // Save changes on Enter key
+                    }
+                  }}
+                  autoFocus
+                  className="bg-transparent border-none outline-none text-xl font-semibold text-gray-900"
+                />
+              ) : (
+                <h1
+                  onClick={() => {
+                    setNewTitle(selectedNotebook.title); // Set newTitle to the current title
+                    setIsEditingTitle(true); // Enable editing mode
+                  }}
+                  className="text-xl font-semibold text-gray-900 cursor-pointer"
+                >
+                  {selectedNotebook.title}
+                </h1>
+              )}
             </div>
           ) : (
             <div className="ml-4 text-xl font-semibold text-gray-400">
@@ -361,8 +413,6 @@ export default function Page() {
             />
           </div>
         </header>
-
-        
 
         <div className="flex flex-1 flex-col gap-4 p-4">
           {/* Toggle Button */}
@@ -413,15 +463,15 @@ export default function Page() {
           </div>
         </div>
         <footer className="bg-gray-100 text-gray-600 py-2 px-4">
-        <div className="flex flex-col justify-center items-center max-w-screen-xl mx-auto">
-          <div className="text-sm text-center">
-            <p>&copy; {new Date().getFullYear()} Built with ❤️ by Scribe Team</p>
+          <div className="flex flex-col justify-center items-center max-w-screen-xl mx-auto">
+            <div className="text-sm text-center">
+              <p>
+                &copy; {new Date().getFullYear()} Built with ❤️ by Scribe Team
+              </p>
+            </div>
           </div>
-        </div>
-      </footer>
-
+        </footer>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-
