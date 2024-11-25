@@ -24,19 +24,22 @@ export function AppSidebar({
   onNewNotebook,
   onSelectNotebook,
   onRenameNotebook,
-  
   onDeleteNotebook,
+  onShareNotebook, // Add this prop
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   notebooks: Array<{ id: string; title: string }>;
   onNewNotebook: () => void;
   onSelectNotebook: (notebook: { id: string; title: string }) => void;
   onRenameNotebook: (id: string, newTitle: string) => void;
-  onDeleteNotebook: (id: string) => void; // New prop for delete function
+  onDeleteNotebook: (id: string) => void;
+  onShareNotebook: (id: string) => void; // New prop for share functionality
 }) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
-  const [editingNotebookId, setEditingNotebookId] = React.useState<string | null>(null);
+  const [editingNotebookId, setEditingNotebookId] = React.useState<
+    string | null
+  >(null);
   const [currentTitle, setCurrentTitle] = React.useState('');
 
   const handleNewNotebook = () => setIsModalOpen(true);
@@ -133,15 +136,41 @@ export function AppSidebar({
                         asChild
                         onClick={() => onSelectNotebook(notebook)}
                       >
-                        <a href={`#notebook-${notebook.id}`}>{notebook.title}</a>
+                        <a href={`#notebook-${notebook.id}`}>
+                          {notebook.title}
+                        </a>
                       </SidebarMenuButton>
-                      <button
-                        onClick={() => handleRename(notebook.id, notebook.title)}
-                        className="p-2 hover:bg-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        aria-label="Rename Notebook"
-                      >
-                        <PencilIcon className="h-5 w-5 text-gray-600" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            handleRename(notebook.id, notebook.title)
+                          }
+                          className="p-2 hover:bg-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          aria-label="Rename Notebook"
+                        >
+                          <PencilIcon className="h-5 w-5 text-gray-600" />
+                        </button>
+                        {/* <button
+                          onClick={() => onShareNotebook(notebook.id)} // Share button handler
+                          className="p-2 hover:bg-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          aria-label="Share Notebook"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5 text-gray-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 16v4a1 1 0 001 1h6a1 1 0 001-1v-4m-3-4l-4-4m0 0L7 12m5-4v4m-5 4h12"
+                            />
+                          </svg>
+                        </button> */}
+                      </div>
                     </div>
                   </SidebarMenuItem>
                 ))}
