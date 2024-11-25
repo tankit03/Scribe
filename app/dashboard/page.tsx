@@ -12,7 +12,7 @@ import {
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import { createClient } from '@/utils/supabase/client';
 import { SpeechSummary } from '@/components/speech-summary';
-import { ShareNotebookModal } from '../../components/share-modal';
+
 
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
@@ -27,20 +27,8 @@ export default function Page() {
   const [notes, setNotes] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [currentNotebookId, setCurrentNotebookId] = useState<string | null>(
-    null
-  );
 
-  const openShareModal = (notebookId: string) => {
-    setCurrentNotebookId(notebookId);
-    setIsShareModalOpen(true);
-  };
-
-  const closeShareModal = () => {
-    setIsShareModalOpen(false);
-    setCurrentNotebookId(null);
-  };
+  
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -391,39 +379,7 @@ export default function Page() {
     setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
   };
 
-  const handleShareNotebook = async (email: string) => {
-    if (!currentNotebookId) {
-      alert('No notebook selected for sharing.');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/share-notebook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          notebookId: currentNotebookId,
-          email,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Error sharing notebook:', error);
-        alert(error.error || 'Failed to share notebook. Please try again.');
-        return;
-      }
-
-      const data = await response.json();
-      alert(data.message || `Notebook shared successfully with ${email}`);
-      closeShareModal();
-    } catch (error) {
-      console.error('Unexpected error while sharing notebook:', error);
-      alert('An unexpected error occurred. Please try again.');
-    }
-  };
+  
 
   return (
     <SidebarProvider>
@@ -433,15 +389,9 @@ export default function Page() {
         onSelectNotebook={handleSelectNotebook}
         onRenameNotebook={handleRenameNotebook}
         onDeleteNotebook={handleDeleteNotebook}
-        onShareNotebook={openShareModal} // Pass share logic
       />
       {/* Add ShareNotebookModal */}
-      <ShareNotebookModal
-        isOpen={isShareModalOpen}
-        onClose={closeShareModal}
-        notebookId={currentNotebookId!}
-        onShare={(email) => handleShareNotebook(currentNotebookId!, email)}
-      />
+      
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
