@@ -11,6 +11,8 @@ import {
 
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import { createClient } from '@/utils/supabase/client';
+import { SpeechSummary } from '@/components/speech-summary';
+import { ShareNotebookModal } from '../../components/share-modal';
 
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
@@ -25,6 +27,20 @@ export default function Page() {
   const [notes, setNotes] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [currentNotebookId, setCurrentNotebookId] = useState<string | null>(
+    null
+  );
+
+  const openShareModal = (notebookId: string) => {
+    setCurrentNotebookId(notebookId);
+    setIsShareModalOpen(true);
+  };
+
+  const closeShareModal = () => {
+    setIsShareModalOpen(false);
+    setCurrentNotebookId(null);
+  };
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -193,7 +209,7 @@ export default function Page() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   };
-  
+
   useEffect(() => {
     fetchNotebooks();
   }, []);
@@ -284,20 +300,28 @@ export default function Page() {
       return;
     }
 
-    const { data: notebooksData, error: notebooksError } = await supabase
-      .from('notebooks')
-      .select('id, title, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: notebooksData, error: notebooksError } = await supabase
+        .from('notebooks')
+        .select('id, title, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (notebooksError) {
-      console.error('Error fetching notebooks:', notebooksError);
-      return;
-    }
+      if (notebooksError) {
+        console.error('Error fetching notebooks:', notebooksError);
+        return;
+      }
 
-    setNotebooks(notebooksData || []);
-    if (!selectedNotebook && notebooksData?.length > 0) {
-      setSelectedNotebook(notebooksData[0]);
+      setNotebooks(notebooksData || []);
+
+      // Automatically select the first notebook and fetch its details
+      if (!selectedNotebook && notebooksData?.length > 0) {
+        const firstNotebook = notebooksData[0];
+        setSelectedNotebook(firstNotebook);
+        handleSelectNotebook(firstNotebook); // Load details for the first notebook
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching notebooks:', err);
     }
   };
 
@@ -307,19 +331,34 @@ export default function Page() {
     setNewTitle(notebook.title); // Initialize the editable title
 
     const supabase = createClient();
-    const { data: notebookDetails, error } = await supabase
-      .from('notebook_details')
-      .select('speech_text, notes')
-      .eq('notebook_id', notebook.id)
-      .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching notebook details:', error);
-      return;
+    try {
+      // Fetch notebook details for the selected notebook
+      const { data: notebookDetails, error } = await supabase
+        .from('notebook_details')
+        .select('speech_text, notes')
+        .eq('notebook_id', notebook.id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('No details found for this notebook. Initializing...');
+          setTranscript('');
+          setNotes('');
+        } else {
+          console.error('Error fetching notebook details:', error);
+          alert('Failed to load notebook details. Please try again.');
+        }
+        return;
+      }
+
+      // Load speech_text and notes into state
+      setTranscript(notebookDetails?.speech_text || '');
+      setNotes(notebookDetails?.notes || '');
+    } catch (err) {
+      console.error('Unexpected error while fetching notebook details:', err);
+      alert('An unexpected error occurred while loading notebook details.');
     }
-
-    setTranscript(notebookDetails?.speech_text || '');
-    setNotes(notebookDetails?.notes || '');
   };
 
   const handleTitleBlur = async () => {
@@ -352,15 +391,56 @@ export default function Page() {
     setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
   };
 
+  const handleShareNotebook = async (email: string) => {
+    if (!currentNotebookId) {
+      alert('No notebook selected for sharing.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/share-notebook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notebookId: currentNotebookId,
+          email,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error sharing notebook:', error);
+        alert(error.error || 'Failed to share notebook. Please try again.');
+        return;
+      }
+
+      const data = await response.json();
+      alert(data.message || `Notebook shared successfully with ${email}`);
+      closeShareModal();
+    } catch (error) {
+      console.error('Unexpected error while sharing notebook:', error);
+      alert('An unexpected error occurred. Please try again.');
+    }
+  };
+
   return (
-    
     <SidebarProvider>
       <AppSidebar
         notebooks={notebooks}
         onNewNotebook={fetchNotebooks}
         onSelectNotebook={handleSelectNotebook}
-        onRenameNotebook={handleRenameNotebook} // Add this prop
+        onRenameNotebook={handleRenameNotebook}
         onDeleteNotebook={handleDeleteNotebook}
+        onShareNotebook={openShareModal} // Pass share logic
+      />
+      {/* Add ShareNotebookModal */}
+      <ShareNotebookModal
+        isOpen={isShareModalOpen}
+        onClose={closeShareModal}
+        notebookId={currentNotebookId!}
+        onShare={(email) => handleShareNotebook(currentNotebookId!, email)}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -403,7 +483,6 @@ export default function Page() {
             </div>
           )}
 
-
           <div className="ml-auto">
             <img
               src="/logo.svg"
@@ -413,7 +492,6 @@ export default function Page() {
               className="object-contain"
             />
           </div>
-
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4">
@@ -431,6 +509,8 @@ export default function Page() {
                 <PlayIcon className="h-8 w-8 text-white" />
               )}
             </button>
+            {/* SpeechSummary Component */}
+            <SpeechSummary transcript={transcript} />
           </div>
 
           {/* Transcript */}
@@ -463,7 +543,6 @@ export default function Page() {
               onChange={handleNotesChange}
             />
           </div>
-          
         </div>
         <footer className="bg-gray-100 text-gray-600 py-2 px-4">
           <div className="flex flex-col justify-center items-center max-w-screen-xl mx-auto">
