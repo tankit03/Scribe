@@ -3,12 +3,10 @@ import React, { useState } from 'react';
 export function ShareNotebookModal({
   isOpen,
   onClose,
-  notebookId,
   onShare,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  notebookId: string;
   onShare: (email: string) => void;
 }) {
   const [email, setEmail] = useState('');

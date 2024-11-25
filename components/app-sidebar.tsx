@@ -25,7 +25,6 @@ export function AppSidebar({
   onSelectNotebook,
   onRenameNotebook,
   onDeleteNotebook,
-  onShareNotebook, // Add this prop
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   notebooks: Array<{ id: string; title: string }>;
@@ -33,7 +32,6 @@ export function AppSidebar({
   onSelectNotebook: (notebook: { id: string; title: string }) => void;
   onRenameNotebook: (id: string, newTitle: string) => void;
   onDeleteNotebook: (id: string) => void;
-  onShareNotebook: (id: string) => void; // New prop for share functionality
 }) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
