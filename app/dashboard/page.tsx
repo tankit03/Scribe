@@ -349,21 +349,21 @@ export default function Page() {
 
   const handleTitleBlur = async () => {
     setIsEditingTitle(false);
-
+  
     if (!selectedNotebook || newTitle.trim() === '') return;
-
+  
     const supabase = createClient();
-
+  
     const { error } = await supabase
       .from('notebooks')
       .update({ title: newTitle })
       .eq('id', selectedNotebook.id);
-
+  
     if (error) {
       console.error('Error updating notebook title:', error);
       return;
     }
-
+  
     // Update sidebar title
     setNotebooks((prev) =>
       prev.map((notebook) =>
@@ -372,10 +372,18 @@ export default function Page() {
           : notebook
       )
     );
-
+  
     // Update selected notebook title
-    setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
+    setSelectedNotebook((prev) =>
+      prev
+        ? {
+            ...prev,
+            title: newTitle,
+          }
+        : null
+    );
   };
+  
 
   
 
