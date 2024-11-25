@@ -14,9 +14,6 @@ import { createClient } from '@/utils/supabase/client';
 import { SpeechSummary } from '@/components/speech-summary';
 
 
-
-
-
 export default function Page() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -45,25 +42,25 @@ export default function Page() {
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
 
-      recognitionInstance.onresult = (event) => {
+      recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         let fullTranscript = '';
-
+      
         for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
           fullTranscript += result[0].transcript;
         }
-
-        // Update the transcript state with the entire text
+      
         setTranscript(fullTranscript);
       };
+      
 
-      recognitionInstance.onerror = (event) => {
+      recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === 'no-speech') {
           console.error('No speech detected. Please try again.');
         } else {
           console.error('Speech recognition error:', event.error);
         }
-      };
+      };      
 
       setRecognition(recognitionInstance);
     } else {
