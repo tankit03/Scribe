@@ -109,18 +109,18 @@ export default function Page() {
     }
   };
 
-  const handleNotesChange = async (event) => {
+  const handleNotesChange = async (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newNotes = event.target.value;
     setNotes(newNotes);
-
+  
     if (selectedNotebook) {
       const supabase = createClient();
-
+  
       console.log('Saving notes:', {
         notebook_id: selectedNotebook.id,
         notes: newNotes,
       });
-
+  
       try {
         // Check if the notebook details already exist
         const { data: existingDetails, error: selectError } = await supabase
@@ -128,19 +128,19 @@ export default function Page() {
           .select('id')
           .eq('notebook_id', selectedNotebook.id)
           .single();
-
+  
         if (selectError && selectError.code !== 'PGRST116') {
           console.error('Error checking notebook details:', selectError);
           return;
         }
-
+  
         if (existingDetails) {
           // Update the existing record
           const { data, error: updateError } = await supabase
             .from('notebook_details')
             .update({ notes: newNotes })
             .eq('notebook_id', selectedNotebook.id);
-
+  
           if (updateError) {
             console.error(
               'Error updating notes:',
@@ -157,7 +157,7 @@ export default function Page() {
               notebook_id: selectedNotebook.id,
               notes: newNotes,
             });
-
+  
           if (insertError) {
             console.error(
               'Error inserting notes:',
@@ -172,6 +172,7 @@ export default function Page() {
       }
     }
   };
+  
 
   const handleResize = (e: React.MouseEvent) => {
     const startY = e.clientY;
