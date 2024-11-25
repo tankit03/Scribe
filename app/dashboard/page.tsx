@@ -22,7 +22,7 @@ export default function Page() {
   );
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
-  const [notebooks, setNotebooks] = useState([]);
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [selectedNotebook, setSelectedNotebook] = useState(null);
   const [notes, setNotes] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -78,11 +78,6 @@ export default function Page() {
       )
     );
 
-    // Optimistically update the selected notebook if it's the one being renamed
-    if (selectedNotebook?.id === id) {
-      setSelectedNotebook((prev) => ({ ...prev, title: newTitle }));
-    }
-
     // Update the title in the database
     const { error } = await supabase
       .from('notebooks')
@@ -91,10 +86,10 @@ export default function Page() {
 
     if (error) {
       console.error('Error renaming notebook:', error);
-      // Optionally revert the optimistic update if the DB update fails
       fetchNotebooks();
     }
   };
+
 
   const handleDeleteNotebook = async (id: string) => {
     console.log('Deleting notebook with ID:', id);

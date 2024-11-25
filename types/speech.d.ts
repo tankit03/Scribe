@@ -27,4 +27,10 @@ interface SpeechRecognition {
     SpeechRecognition?: typeof SpeechRecognition;
     webkitSpeechRecognition?: typeof SpeechRecognition;
   }
+
+  interface Notebook {
+    id: string;
+    title: string;
+    created_at?: string; // Add other fields if applicable
+  }
   
