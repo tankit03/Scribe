@@ -39,21 +39,22 @@ export default function Home() {
       {/* Header */}
       <header className="absolute top-0 left-0 w-full py-4 px-6 flex justify-between items-center">
         {/* Log In button on the right side */}
-        <button 
+        {/* <button 
           className="px-4 py-2 text-sm font-semibold text-white bg-black rounded hover:bg-gray-700 ml-auto"
           onClick={handleLoginClick}
         >
           Log In
-        </button>
+        </button> */}
 
         {/* Theme Switcher */}
         <div
-          className="md:absolute md:left-1/2 header-switcher flex items-center cursor-pointer h-full px-10 md:-translate-x-1/2"
+          className="px-4 py-2 md:absolute md:left-1/2 header-switcher flex items-center cursor-pointer h-full px-10 md:-translate-x-1/2 mt-10" // Adjust the mt-6 to your preferred value
           onClick={handleThemeSwitch}
         >
           <div className={`w-[1.2rem] h-[1.2rem] border-rem border-secondary ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-full transition-mode`}></div>
           <div className={`w-[1.2rem] h-[1.2rem] border-rem border-secondary ${isDarkMode ? 'bg-black' : 'bg-white'} rounded-full -ml-[0.4rem] transition-mode`}></div>
         </div>
+
       </header>
       
       {/* Main Content */}
