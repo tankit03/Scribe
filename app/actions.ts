@@ -24,7 +24,9 @@ export async function login(formData: FormData) {
   redirect('/dashboard');
 }
 
+
 export async function signup(formData: FormData) {
+  console.log('signup action');
   const supabase = await createClient();
 
   // Type-casting here for convenience
@@ -50,5 +52,5 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  redirect('/login');
 }
